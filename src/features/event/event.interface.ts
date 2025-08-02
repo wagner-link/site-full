@@ -89,3 +89,27 @@ export interface EventQueryParams {
   /** Search term for filtering */
   search?: string;
 }
+
+/**
+ * Response interface for successful event creation
+ */
+export interface CreateEventResponse {
+  /** Created event data */
+  event: Event;
+  /** Success message */
+  message: string;
+  /** HTTP status code */
+  status: number;
+}
+
+/**
+ * Validation error interface
+ */
+export interface EventValidationError {
+  /** Field name that failed validation */
+  field: string;
+  /** Error message */
+  message: string;
+  /** Received value */
+  value?: any;
+}
