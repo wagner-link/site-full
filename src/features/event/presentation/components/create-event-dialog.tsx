@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api, useQueryClient } from "@/igniter.client";
@@ -97,9 +97,16 @@ export function CreateEventDialog({
   const triggerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { users } = useCalendar();
+  
+  // Dialog state management
+  const [open, setOpen] = useState(false);
 
-  // API mutation
-  const createMutation = api.event.create.useMutation();
+  // API mutation with automatic query invalidation
+  const createMutation = api.event.create.useMutation({
+    onSuccess: () => {
+      queryClient.invalidate(["event.findMany"]);
+    }
+  });
 
   // Form setup with Zod validation
   const form = useFormWithZod({
@@ -143,18 +150,24 @@ export function CreateEventDialog({
           return;
         }
 
-        // Show success modal instead of toast
-        EventSuccessModal.show({
-          event: result.data.event,
-          onClose: () => {
-            // Invalidate queries to refetch data
-            queryClient.invalidate(["event.findMany"]);
-            
-            // Reset form and close dialog
-            form.reset();
-            triggerRef.current?.click();
-          }
-        });
+        // Success handling
+        toast.success("Evento criado com sucesso!");
+        
+        // Show success modal if available
+        if (typeof EventSuccessModal?.show === 'function') {
+          EventSuccessModal.show({
+            event: result.data.event,
+            onClose: () => {
+              // Close dialog and reset form
+              setOpen(false);
+              form.reset();
+            }
+          });
+        } else {
+          // Fallback: close dialog and reset form
+          setOpen(false);
+          form.reset();
+        }
 
       } catch (error) {
         toast.error("Erro inesperado ao criar evento.");
@@ -165,8 +178,9 @@ export function CreateEventDialog({
 
   const isSubmitting = createMutation.loading;
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
       form.reset();
     }
   };
@@ -181,7 +195,7 @@ export function CreateEventDialog({
   };
 
   return (
-    <Dialog onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <div ref={triggerRef}>{children}</div>
       </DialogTrigger>
@@ -456,7 +470,7 @@ export function CreateEventDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => triggerRef.current?.click()}
+                onClick={() => setOpen(false)}
                 disabled={isSubmitting}
                 className="cursor-pointer"
               >
